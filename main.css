@@ -1,0 +1,10 @@
+.container {
+    margin: auto;
+    max-width: 600px;
+    width: 90%;
+}
+
+.simbox {
+    margin: auto;
+    width: 410px;
+}
