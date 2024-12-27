@@ -1,4 +1,37 @@
 TODO: 
 - write simulation and visualization of the pendulum
 - add visualization of the fractal? 
- -
+- integrator upgrades? 
+
+
+Find a symplectic integrator that will work with our hamiltonian, or with constraints?
+
+
+//Implementation of the Runge-Kutta-Nystoem 4th order method for a system of 2 ODEs 
+const A21 = (2 - Math.sqrt(3))/12; const A32 = Math.sqrt(3)/6;;
+const C1 = (3+Math.sqrt(3))/6; const C2 = (3-Math.sqrt(3))/6; const C3 = (3+Math.sqrt(3))/6; 
+const B1 = (3-Math.sqrt(12))/12; const B2 = 1./2;  const B3 = (3+Math.sqrt(12))/12;
+const D1 = (5-Math.sqrt(27))/24; const D2 = (3+Math.sqrt(3))/12; const D3 = (1+Math.sqrt(3))/24;
+console.log('Sum of Bs:', B1 + B2 + B3);
+console.log('Sum of Ds:', D1 + D2 + D3);
+function rk4n(theta1,theta1dot,theta2,theta2dot,dt){
+    g1_1 = theta1 + dt*C1*theta1dot;
+    g1_2 = theta2 + dt*C1*theta2dot; 
+    const {ag11,ag12} = accels(g1_1,g1_2); 
+    g2_1 = theta1 + dt*C2*theta1dot + dt*dt *  A21 * ag11;
+    g2_2 = theta2 + dt*C2*theta2dot + dt*dt *  A21 * ag12;
+    const {ag21,ag22} = accels(g2_1,g2_2);
+    g3_1 = theta1 + dt*C3*theta1dot + dt*dt *  A32 * ag21;
+    g3_2 = theta2 + dt*C3*theta2dot + dt*dt *  A32 * ag22;
+    const {ag31,ag32} = accels(g2_1,g2_2);
+    theta4_1 = theta1 + dt*theta1dot + dt*dt * (D1*ag11 + D2*ag21 + D3*ag31);
+    theta4_2 = theta2 + dt*theta2dot + dt*dt * (D1*ag12 + D2*ag22 + D3*ag32);
+    thetadot4_1 = theta1dot + dt * (B1*ag11 + B2*ag21 + B3*ag31);
+    thetadot4_2 = theta2dot + dt * (B1*ag12 + B2*ag22 + B3*ag32);
+    return {theta4_1,thetadot4_1,theta4_2,thetadot4_2};
+}
+
+function accels(theta1,theta2){
+    var a = 0; var b = 0;
+    return {a,b}; // acceleration of the first and second pendulum bobs
+}
