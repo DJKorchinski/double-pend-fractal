@@ -1,10 +1,18 @@
 TODO: 
-- write simulation and visualization of the pendulum
-- add visualization of the fractal? 
-- integrator upgrades? 
+- add controls:
+    - rotational symmetry of fractal? (don't re-simulate right half of the fractal)
+    - controll-able speed
+    - option: simulate at 1x, 3x, 10x, 100x speed for fractal visualization (say, 10^1 ms, 10^2, 10^3 ms...)
+    - line decay should scale with simulation speed
+    - lines should actually be drawn (better with high simulation speed?)
+        - should draw multiple line sections at very high simulation speeds 
+        - also, should check for flips every few t at high simulation speed (more than dtick)
+- integrator upgrades? Fehlberg method? 
 
 
 Find a symplectic integrator that will work with our hamiltonian, or with constraints?
+
+
 
 
 //Implementation of the Runge-Kutta-Nystoem 4th order method for a system of 2 ODEs 

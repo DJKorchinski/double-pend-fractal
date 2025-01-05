@@ -3,13 +3,16 @@ const Npix = L*L;
 var imgData = new ImageData(L,L); 
 var fractalData = new ImageData(L,L);
 
-const g = 9.8; const R = 50; const T_FACTOR = 3; const RSQ = R*R; 
+var NUM_PENDULA_SUBDIVISIONS = 3;
+const g = 9.8; const R = 50; const T_FACTOR = 100; const RSQ = R*R; 
+const TMAX = 60; 
 var theta1s = [Math.PI * 0.5,Math.PI * 0.5 ]; var theta2s = [Math.PI * 0.5,Math.PI * 0.495 ]; var theta1dots = [0.0, 0.]; var theta2dots = [0.,0.];
 var totalFlips = [0,0]; var timeToFlip = [0,0]; 
 var t = 0;
 var firstFlipIndsThisTick = [];
 var indsToRedraw = [];
 function tick(dttot) {
+    dttot = Math.min(dttot, 1000); //cap the dt to no lower than 1 fps
     dttick = T_FACTOR * dttot / 1000;
     dt = Math.min(0.0025,dttick)
     firstFlipIndsThisTick = [];
@@ -54,12 +57,23 @@ function tick(dttot) {
     // console.log(t,KE(theta1,theta1dot,theta2,theta2dot) + PE(theta1,theta1dot,theta2,theta2dot));
     //Now, we need to process the flipped pendula, and update the grid.
     for (var i = 0; i < firstFlipIndsThisTick.length; i++){
-        console.log('flipped pendulum',firstFlipIndsThisTick[i]);
         pendula_ind = firstFlipIndsThisTick[i];
         grid_ind = grid_inds_being_computed[pendula_ind];
         current_grid.mspoints[grid_ind].computed = true;
         current_grid.mspoints[grid_ind].tfirst = timeToFlip[pendula_ind];
         indsToRedraw.push(grid_ind);
+    }
+
+    //Now, check to see  if we have exceeded our simulation time!
+    if(t > TMAX){
+        for(var i = 0; i < inds_to_compute.length; i++){
+            grid_ind = inds_to_compute[i];
+            if(current_grid.mspoints[grid_ind].computed == false){
+                current_grid.mspoints[grid_ind].computed = true;
+                indsToRedraw.push(grid_ind);
+            }
+        }
+        should_reinit = true;
     }
 }
 
@@ -81,7 +95,7 @@ function derivs(theta1,thetadot1,theta2,thetadot2,r){
 function KE(theta1,thetadot1,theta2,thetadot2){
     return 0.5 * R*R* (2*thetadot1*thetadot1 + thetadot2*thetadot2 + 2*thetadot1*thetadot2*Math.cos(theta1 - theta2));
 }
-//Computin the potential energy
+//Computing the potential energy
 function PE(theta1,thetadot1,theta2,thetadot2){
     return -g * R * (2*Math.cos(theta1) + Math.cos(theta2));
 }
@@ -129,13 +143,14 @@ function draw() {
         let w = current_grid.mspoints[ind].pixel_extent.w;
         let h = current_grid.mspoints[ind].pixel_extent.h;
         let tFlip = current_grid.mspoints[ind].tfirst;
-        ctx.fillStyle = `rgba(0,${Math.min(Math.floor(tFlip),255)},0,1.0)`;
+        ctx.fillStyle = `rgba(0,${Math.min(Math.floor(255*tFlip/TMAX),255)},0,1.0)`;
         ctx.fillRect(x,y,w,h);
     }
     if(indsToRedraw.length > 0){
         fractalData = ctx.getImageData(0,L,L,L);
+        indsToRedraw = [];
     }
-    //Let's also draw the location of the initial pendula!
+    //Let's also draw the location of the pendula being computed!
     for (var i = 0; i < grid_inds_being_computed.length; i ++){
         let ind = grid_inds_being_computed[i];
         let x = current_grid.mspoints[ind].pixel_extent.sx;
@@ -179,6 +194,15 @@ function main_loop(timestamp){
         draw(dtSinceLastFrame);
         dtSinceLastFrame = 0;
     }
+    if(should_reinit && indsToRedraw.length == 0){
+        should_reinit = false;
+        needNewGrid = !initPendula(NUM_PENDULA_SUBDIVISIONS);
+        if(needNewGrid){
+            current_grid = setupGrid(current_grid.subdivisions + 1);
+            initPendula(NUM_PENDULA_SUBDIVISIONS);
+        }
+    }
+
     lastframems = timestamp;
     requestAnimationFrame(main_loop);
 }
@@ -201,11 +225,13 @@ function setupGrid(numDivisions) {
 }
 
 var grid_inds_being_computed = [];
+var should_reinit = false;
 function initPendula(numDivisions){
     theta1s = []; theta2s = []; theta1dots = []; theta2dots = [];
     
     //okay, let's iterate along until we find a cell that has not been computed.
     inds_to_compute = [];
+    found_uncomputed = false;
     for (var i = 0; i < current_grid.mspoints.length; i++){
         if(current_grid.mspoints[i].computed == false){
             for (var j = 0; j < 2**numDivisions; j++){
@@ -213,8 +239,12 @@ function initPendula(numDivisions){
                     inds_to_compute.push(i+j+current_grid.axissamples*k);
                 }
             }
+            found_uncomputed = true;
             break;
         }
+    }
+    if(!found_uncomputed){
+        return false;
     }
     grid_inds_being_computed = inds_to_compute;
     console.log(inds_to_compute);
@@ -228,9 +258,10 @@ function initPendula(numDivisions){
     }
 
     t = 0;
+    return true;
 }
 
-var current_grid = setupGrid(2);
+var current_grid = setupGrid(Math.max(2,NUM_PENDULA_SUBDIVISIONS));
 function init(){
     //fixing the alpha values in the img_buffer.
     //making it green!
@@ -241,7 +272,7 @@ function init(){
     lastFrameImage = ctx.getImageData(0,0,L,L);
     fractalData = ctx.getImageData(0,L,L,L);
     for(var i =3 ; i < Npix*4; i+=4){ fractalData.data[i] = 255; } //maxing the alpha 
-    initPendula(2);
+    initPendula(NUM_PENDULA_SUBDIVISIONS);
     requestAnimationFrame(main_loop);
 }
 
