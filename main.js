@@ -2,6 +2,10 @@ const  L = 512;
 const Npix = L*L;
 var imgData = new ImageData(L,L); 
 var fractalData = new ImageData(L,L);
+var forbiddenData = new ImageData(L,L); // the forbidden region. 
+
+var USE_SYMMETRY = true;
+var USE_ENERGY = true;
 
 var NUM_PENDULA_SUBDIVISIONS = 3;
 const g = 9.8; const R = 50; const T_FACTOR = 100; const RSQ = R*R; 
@@ -139,14 +143,23 @@ function draw() {
     for (var i = 0; i < indsToRedraw.length; i++){
         let ind = indsToRedraw[i];
         let x = current_grid.mspoints[ind].pixel_extent.sx;
-        let y = current_grid.mspoints[ind].pixel_extent.sy + L;
+        let y = current_grid.mspoints[ind].pixel_extent.sy + L; // +L to get the lower half of the canvas.
         let w = current_grid.mspoints[ind].pixel_extent.w;
         let h = current_grid.mspoints[ind].pixel_extent.h;
         let tFlip = current_grid.mspoints[ind].tfirst;
         ctx.fillStyle = `rgba(0,${Math.min(Math.floor(255*tFlip/TMAX),255)},0,1.0)`;
         ctx.fillRect(x,y,w,h);
+        if(USE_SYMMETRY){
+            x += w/2; y += h/2; //we want to rotate the square's centre about L/2, L/2 to get the other half of the fractal.
+            x = L - x;
+            y = 3*L - y;
+            x -= w/2; y -= h/2; //undoing our previous modification.
+            // console.log( current_grid.mspoints[ind].pixel_extent.sx, current_grid.mspoints[ind].pixel_extent.sy+L, x,y)
+            ctx.fillRect(x,y,w,h);
+        }
     }
     if(indsToRedraw.length > 0){
+        // ctx.putImageData(forbiddenData,0,L);
         fractalData = ctx.getImageData(0,L,L,L);
         indsToRedraw = [];
     }
@@ -224,11 +237,22 @@ function setupGrid(numDivisions) {
     return grid;
 }
 
+
+function screen_to_ms(sx,sy){
+    // assume that sx and xy are between 0,L 
+    x = (2*sx / L - 1) * Math.PI;
+    y = (2*sy / L - 1) * Math.PI;
+    return [x,y]
+}
+
 var grid_inds_being_computed = [];
 var should_reinit = false;
 function initPendula(numDivisions){
     theta1s = []; theta2s = []; theta1dots = []; theta2dots = [];
     
+    //TODO: init pendula only if their PE is high enough (if USE_ENERGY is true)
+    //TODO: init pendula only if their sx < L/2 (if USE_SYMMETRY is true) -- this is just x < 0, I think. 
+
     //okay, let's iterate along until we find a cell that has not been computed.
     inds_to_compute = [];
     found_uncomputed = false;
@@ -236,18 +260,36 @@ function initPendula(numDivisions){
         if(current_grid.mspoints[i].computed == false){
             for (var j = 0; j < 2**numDivisions; j++){
                 for(var k = 0; k < 2**numDivisions; k++){
-                    inds_to_compute.push(i+j+current_grid.axissamples*k);
+                    if(inds_to_compute.length >= 2**(2*numDivisions)){
+                        continue;
+                    }
+                    indx = i+j+current_grid.axissamples*k;
+                    if(indx >= current_grid.mspoints.length){
+                        break;
+                    }
+                    if(USE_SYMMETRY && current_grid.mspoints[indx].x > 0){
+                        continue; 
+                    }
+                    if(USE_ENERGY && ( PE(current_grid.mspoints[indx].x,0, current_grid.mspoints[indx].y, 0) < PE(0,0,Math.PI,0))){
+                        continue; 
+                    }
+                    if(current_grid.mspoints[indx].computed == true){
+                        continue;
+                    }
+                    inds_to_compute.push(indx);
+                    found_uncomputed = true; 
                 }
             }
-            found_uncomputed = true;
-            break;
+            if(inds_to_compute.length>=2**(2*numDivisions)){
+                break;
+            }
         }
     }
     if(!found_uncomputed){
         return false;
     }
     grid_inds_being_computed = inds_to_compute;
-    console.log(inds_to_compute);
+    // console.log(inds_to_compute);
     
     totalFlips = []; timeToFlip = [];
     for (var i = 0; i < inds_to_compute.length; i++){
@@ -261,6 +303,25 @@ function initPendula(numDivisions){
     return true;
 }
 
+function generateForbiddenData(){
+    for(var i = 0; i < L; i++){
+        for(var j = 0; j < L; j ++){
+            const [x,y] = screen_to_ms(i+.5,j+.5)
+            indx = 4*(i + j*L);
+            if(PE(x,0,y,0) > PE(0,0, Math.PI,0)){
+                forbiddenData.data[indx+0] = 0;
+                forbiddenData.data[indx+3] = 255;
+            }
+            else{
+                forbiddenData.data[indx+0] = 0;
+                forbiddenData.data[indx+1] = 0;
+                forbiddenData.data[indx+2] = 0;
+                forbiddenData.data[indx+3] = 255;
+            }
+        }
+    }
+}
+
 var current_grid = setupGrid(Math.max(2,NUM_PENDULA_SUBDIVISIONS));
 function init(){
     //fixing the alpha values in the img_buffer.
@@ -272,6 +333,7 @@ function init(){
     lastFrameImage = ctx.getImageData(0,0,L,L);
     fractalData = ctx.getImageData(0,L,L,L);
     for(var i =3 ; i < Npix*4; i+=4){ fractalData.data[i] = 255; } //maxing the alpha 
+    generateForbiddenData();
     initPendula(NUM_PENDULA_SUBDIVISIONS);
     requestAnimationFrame(main_loop);
 }
