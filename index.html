@@ -5,6 +5,26 @@
 </head>
 <body>
 <div class='container'>
+    <div class='controls'>
+        <label>
+            <input type="checkbox" id="skipLowEnergy" checked="true"> Skip low energy points
+        </label>
+        <br>
+        <label>
+            <input type="checkbox" id="useSymmetry" checked="true"> Use symmetry
+        </label>
+        <br>
+        <label for="speedMultiplier">Speed multiplier:</label>
+        <select id="speedMultiplier">
+            <!-- <option value="1">1x</option> -->
+            <option value="3">3x</option>
+            <option value="10">10x</option>
+            <option value="30">30x</option>
+            <option value="100">100x</option>
+            <option value="300">300x</option>
+            <!-- <option value="max">max</option> -->
+        </select>
+    </div>
 <div class='simbox'>
     <canvas id='can', width = '512', height = '1024' style="border:1px solid #000000;">A simulation of the double pendulum fractal.</canvas><br />
     <script src = 'main.js'></script>
@@ -12,6 +32,8 @@
 
 <p> 
 This is a simulation of the chaotic double pendulum. 
+The top panel shows the position and orientation of the pendulum in real space. 
+The bottom panel shows how long it takes pendula starting in different configurations to flip once.
 </p>
 </div>
 </body>

@@ -3,12 +3,13 @@ const Npix = L*L;
 var imgData = new ImageData(L,L); 
 var fractalData = new ImageData(L,L);
 var forbiddenData = new ImageData(L,L); // the forbidden region. 
+var forbiddenDataBitmap= null; 
 
 var USE_SYMMETRY = true;
 var USE_ENERGY = true;
 
 var NUM_PENDULA_SUBDIVISIONS = 3;
-const g = 9.8; const R = 50; const T_FACTOR = 100; const RSQ = R*R; 
+const g = 9.8; const R = 50; var T_FACTOR = 3; const RSQ = R*R; 
 const TMAX = 60; 
 var theta1s = [Math.PI * 0.5,Math.PI * 0.5 ]; var theta2s = [Math.PI * 0.5,Math.PI * 0.495 ]; var theta1dots = [0.0, 0.]; var theta2dots = [0.,0.];
 var totalFlips = [0,0]; var timeToFlip = [0,0]; 
@@ -159,7 +160,9 @@ function draw() {
         }
     }
     if(indsToRedraw.length > 0){
-        // ctx.putImageData(forbiddenData,0,L);
+        if(forbiddenDataBitmap != null) {
+            ctx.drawImage(forbiddenDataBitmap,0,L); 
+        }
         fractalData = ctx.getImageData(0,L,L,L);
         indsToRedraw = [];
     }
@@ -309,8 +312,7 @@ function generateForbiddenData(){
             const [x,y] = screen_to_ms(i+.5,j+.5)
             indx = 4*(i + j*L);
             if(PE(x,0,y,0) > PE(0,0, Math.PI,0)){
-                forbiddenData.data[indx+0] = 0;
-                forbiddenData.data[indx+3] = 255;
+                forbiddenData.data[indx+3] = 0;
             }
             else{
                 forbiddenData.data[indx+0] = 0;
@@ -320,6 +322,7 @@ function generateForbiddenData(){
             }
         }
     }
+    createImageBitmap(forbiddenData).then(function(imageBitmap){forbiddenDataBitmap = imageBitmap})
 }
 
 var current_grid = setupGrid(Math.max(2,NUM_PENDULA_SUBDIVISIONS));
@@ -335,10 +338,27 @@ function init(){
     for(var i =3 ; i < Npix*4; i+=4){ fractalData.data[i] = 255; } //maxing the alpha 
     generateForbiddenData();
     initPendula(NUM_PENDULA_SUBDIVISIONS);
+    //adding UI event handlers:
+    UI.speed_mult_dropdown.addEventListener('change',speed_changed);
+    T_FACTOR = UI.speed_mult_dropdown.value;
+    UI.use_energy_check.addEventListener('change',(function(ev){USE_ENERGY=this.checked}));
+    UI.use_symmetry_check.addEventListener('change',(function(ev){USE_SYMMETRY=this.checked}));
     requestAnimationFrame(main_loop);
 }
+
+function speed_changed(ev){
+    // console.log(this,ev);
+    console.log(this.value);
+    T_FACTOR = this.value;
+}
+
 
 
 const can = document.getElementById('can');
 const ctx = can.getContext("2d");
+const UI={
+    use_energy_check:document.getElementById('skipLowEnergy'),
+    use_symmetry_check:document.getElementById('useSymmetry'),
+    speed_mult_dropdown:document.getElementById('speedMultiplier')
+}
 document.addEventListener('DOMContentLoaded', init, false);
