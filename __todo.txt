@@ -1,13 +1,18 @@
 TODO: 
 - add controls:
-    - rotational symmetry of fractal? (don't re-simulate right half of the fractal)
-    - controll-able speed
-    - option: simulate at 1x, 3x, 10x, 100x speed for fractal visualization (say, 10^1 ms, 10^2, 10^3 ms...)
-    - line decay should scale with simulation speed
+    - option to skip simulations within the energetically forbidden region [need to fix graphical glitches]
+    - control to incrase maximum simulation time (also, add more colours based on time to flip)
+    - option to stop simulating pendula that flip. (or change their color?)
+    - line decay should scale with simulation speed, and perhaps be cleared when we start a new simulation? 
     - lines should actually be drawn (better with high simulation speed?)
         - should draw multiple line sections at very high simulation speeds 
         - also, should check for flips every few t at high simulation speed (more than dtick)
+    - add the ability to add manual pendula to the simulation.
 - integrator upgrades? Fehlberg method? 
+- label the axes of the pendulum, and a diagram of what those angles mean.
+- perhaps some equations? https://www.mathjax.org/#gettingstarted
+
+
 
 
 Find a symplectic integrator that will work with our hamiltonian, or with constraints?
