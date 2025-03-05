@@ -14,7 +14,6 @@ TODO:
 
 
 
-
 Find a symplectic integrator that will work with our hamiltonian, or with constraints?
 
 
